@@ -69,14 +69,14 @@ private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromPCLPointCloud2(input_pcl_cloud, *temp_cloud);
     
-    // Create a new point cloud with RGB color information
+    // Create a new point cloud with RGB color information and copy data from input cloudb
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::copyPointCloud(*temp_cloud, *colored_cloud);
 
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
+
     
 
-    pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter (true);
-    cropBoxFilter.setInputCloud(colored_cloud);
     // define box filter size
     // float max_x = this->get_parameter("max_x").get_parameter_value().get<float>();
     // float min_x = this->get_parameter("min_x").get_parameter_value().get<float>();
@@ -97,38 +97,48 @@ private:
     // cropBoxFilter.setTranslation(box_translation);
       
     if (objs_buffer.size() > 0) {
-      float trans_x = objs_buffer.at(0).kinematics.pose_with_covariance.pose.position.x;
-      float trans_y = objs_buffer.at(0).kinematics.pose_with_covariance.pose.position.y;
-      float trans_z = objs_buffer.at(0).kinematics.pose_with_covariance.pose.position.z;
-      // Eigen::Vector3f box_translation(trans_x, trans_y, trans_z);
-      // cropBoxFilter.setTranslation(box_translation);
-      
-      // float max_x =  + objs_buffer.at(0).shape.dimensions.x / 2.0;
-      // float min_x =  - objs_buffer.at(0).shape.dimensions.x / 2.0;
-      // float max_y =  + objs_buffer.at(0).shape.dimensions.y / 2.0;
-      // float min_y =  - objs_buffer.at(0).shape.dimensions.y / 2.0;
-      // float max_z =  + objs_buffer.at(0).shape.dimensions.z / 2.0;
-      // float min_z =  - objs_buffer.at(0).shape.dimensions.z / 2.0; 
-      float max_x = trans_x + objs_buffer.at(0).shape.dimensions.x / 2.0;
-      float min_x = trans_x - objs_buffer.at(0).shape.dimensions.x / 2.0;
-      float max_y = trans_y + objs_buffer.at(0).shape.dimensions.y / 2.0;
-      float min_y = trans_y - objs_buffer.at(0).shape.dimensions.y / 2.0;
-      float max_z = trans_z + objs_buffer.at(0).shape.dimensions.z / 2.0;
-      float min_z = trans_z - objs_buffer.at(0).shape.dimensions.z / 2.0; 
+      for (auto object : objs_buffer) {
 
-      Eigen::Vector4f min_pt (min_x, min_y, min_z, 0.0f);
-      Eigen::Vector4f max_pt (max_x, max_y, max_z, 0.0f);
-      cropBoxFilter.setMin(min_pt);
-      cropBoxFilter.setMax(max_pt);
+    
+        pcl::PointCloud<pcl::PointXYZRGB> filtered_cloud;
+        pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter (true);
+        cropBoxFilter.setInputCloud(colored_cloud);
+        float trans_x = object.kinematics.pose_with_covariance.pose.position.x;
+        float trans_y = object.kinematics.pose_with_covariance.pose.position.y;
+        float trans_z = object.kinematics.pose_with_covariance.pose.position.z;
+        // Eigen::Vector3f boxlation(trans_x, trans_y, trans_z);
+        // cropBoxFilter.setTranslation(box_translation);
+
+        // float max_x =  + object.shape.dimensions.x / 2.0;
+        // float min_x =  - object.shape.dimensions.x / 2.0;
+        // float max_y =  + object.shape.dimensions.y / 2.0;
+        // float min_y =  - object.shape.dimensions.y / 2.0;
+        // float max_z =  + object.shape.dimensions.z / 2.0;
+        // float min_z =  - object.shape.dimensions.z / 2.0; 
+        float max_x = trans_x + object.shape.dimensions.x / 2.0;
+        float min_x = trans_x - object.shape.dimensions.x / 2.0;
+        float max_y = trans_y + object.shape.dimensions.y / 2.0;
+        float min_y = trans_y - object.shape.dimensions.y / 2.0;
+        float max_z = trans_z + object.shape.dimensions.z / 2.0;
+        float min_z = trans_z - object.shape.dimensions.z / 2.0; 
+
+        Eigen::Vector4f min_pt (min_x, min_y, min_z, 0.0f);
+        Eigen::Vector4f max_pt (max_x, max_y, max_z, 0.0f);
+        cropBoxFilter.setMin(min_pt);
+        cropBoxFilter.setMax(max_pt);
+        cropBoxFilter.filter(filtered_cloud);
+        
+        *out_cloud += filtered_cloud;
+
+      }
+      
     }
     // // cropBoxFilter.setNegative(true);
 
 
-    pcl::PointCloud<pcl::PointXYZRGB> out_cloud;
 
-    std::vector<int> indices;
+    // std::vector<int> indices;
     // cropBoxFilter.filter(indices);
-    cropBoxFilter.filter(out_cloud);
 
     // std::string filter_axis = this->get_parameter("filter_axis").get_parameter_value().get<std::string>();
     // float filter_max = this->get_parameter("filter_max").get_parameter_value().get<float>();
@@ -143,18 +153,18 @@ private:
     // pass.filter(out_cloud);
     
     // Define a custom color for the box polygons
-    const uint8_t r = 255, g = 0, b = 0;
+    // const uint8_t r = 255, g = 0, b = 0;
     
-    for (size_t i = 0; i < indices.size(); i++) {
-      colored_cloud->points[i].r = r;
-      colored_cloud->points[i].g = g;
-      colored_cloud->points[i].b = b;
-    }
+    // for (size_t i = 0; i < indices.size(); i++) {
+    //   colored_cloud->points[i].r = r;
+    //   colored_cloud->points[i].g = g;
+    //   colored_cloud->points[i].b = b;
+    // }
 
     sensor_msgs::msg::PointCloud2::SharedPtr output_pointcloud_msg_ptr( new sensor_msgs::msg::PointCloud2);
     // pcl::toROSMsg(*colored_cloud, *output_pointcloud_msg_ptr);
     
-    pcl::toROSMsg(out_cloud, *output_pointcloud_msg_ptr);
+    pcl::toROSMsg(*out_cloud, *output_pointcloud_msg_ptr);
     output_pointcloud_msg_ptr->header = input_pointcloud_msg->header;
 
     // TODO(lexavtanke) get pointcloud in frame base link and detected objects in frame map
@@ -176,6 +186,11 @@ private:
     }
     // RCLCPP_INFO(this->get_logger(), "Update objects buffer");
   }
+
+  // void filterPointcloud(const pcl::PointCloud<pcl::)
+  // {
+
+  // }
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscription_;
