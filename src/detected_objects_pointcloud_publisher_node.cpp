@@ -15,18 +15,16 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/passthrough.h>
-// #include <pcl/filters/voxel_grid.h>
 
-// #include <pcl/features/normal_3d.h>
-// #include <pcl/kdtree/kdtree_flann.h>
-// #include <pcl/sample_consensus/method_types.h>
-// #include <pcl/sample_consensus/model_types.h>
-// #include <pcl/segmentation/sac_segmentation.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 class DetectedObjectsPointcloudPublisher : public rclcpp::Node
 {
 public:
-  DetectedObjectsPointcloudPublisher() : Node ("detected_objects_poincloud_publisher")
+  DetectedObjectsPointcloudPublisher() : Node ("detected_objects_poincloud_publisher"),  
+    tf_buffer_(this->get_clock()),
+    tf_listener_(tf_buffer_)
   {
     this->declare_parameter("min_x", 0.0f);
     this->declare_parameter("max_x", 1.0f);
@@ -127,6 +125,16 @@ private:
         cropBoxFilter.setMin(min_pt);
         cropBoxFilter.setMax(max_pt);
         cropBoxFilter.filter(filtered_cloud);
+
+        // Define a custom color for the box polygons
+        const uint8_t r = 0, g = 0, b = 255;
+
+        for (auto cloud_it = filtered_cloud.begin(); cloud_it != filtered_cloud.end(); ++cloud_it)
+        {
+          cloud_it->r = r;
+          cloud_it->g = g;
+          cloud_it->b = b;
+        }
         
         *out_cloud += filtered_cloud;
 
@@ -178,7 +186,7 @@ private:
 
   void objectsCallback(const autoware_auto_perception_msgs::msg::DetectedObjects::SharedPtr input_detected_objs_msg)
   {
-    // objs_buffer->header = input_detected_objs_msg->header;
+    objects_frame_id_ = input_detected_objs_msg->header.frame_id;
     objs_buffer.clear();
     for (size_t i = 0; i != input_detected_objs_msg->objects.size(); i++)
     {
@@ -197,6 +205,10 @@ private:
   rclcpp::Subscription<autoware_auto_perception_msgs::msg::DetectedObjects>::SharedPtr detected_objects_subscription_;
 
   std::vector<autoware_auto_perception_msgs::msg::DetectedObject> objs_buffer;
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
+
+  std::string objects_frame_id_;
 
 
 };
