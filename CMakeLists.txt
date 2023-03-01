@@ -7,6 +7,10 @@ find_package(autoware_auto_perception_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_sensor_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 autoware_package()
 
 include_directories(
