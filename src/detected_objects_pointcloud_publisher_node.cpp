@@ -17,20 +17,23 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/conversions.h>
 #include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
 
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/crop_box.h>
+#include <pcl/filters/crop_hull.h>
 #include <pcl/filters/passthrough.h>
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+using Shape = autoware_auto_perception_msgs::msg::Shape;
 
   // struct for creating objects buffer 
 struct object_info
 {
-  autoware_auto_perception_msgs::msg::Shape shape;
+  Shape shape;
   geometry_msgs::msg::Point position; 
   geometry_msgs::msg::Quaternion orientation;
   std::vector<autoware_auto_perception_msgs::msg::ObjectClassification>  classification;
@@ -60,8 +63,6 @@ public:
       this, 
       std::placeholders::_1));
 
-    // std::vector<object_info> objs_buffer;
-
     RCLCPP_INFO(this->get_logger(), "Hello from percepted_objects_pointcloud_publisher constructor\n");
   }
 
@@ -71,8 +72,6 @@ public:
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
-
-
 
   std::vector<object_info> objs_buffer;
   std::string objects_frame_id_;
@@ -126,7 +125,7 @@ private:
       RCLCPP_INFO(this->get_logger(), "Filtering pointcloud");
       for (auto object : objs_buffer) {
   
-          if (object.shape.type == 0)
+        if (object.shape.type == Shape::BOUNDING_BOX || object.shape.type == Shape::CYLINDER )
         {
           pcl::PointCloud<pcl::PointXYZRGB> filtered_cloud;
           pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter (true);
@@ -173,11 +172,15 @@ private:
 
           *out_cloud += filtered_cloud;
 
+        } else if (object.shape.type == Shape::POLYGON) 
+        {
+          filterPolygon(colored_cloud, out_cloud, object);
         }
 
       }
       
     }
+
 
     sensor_msgs::msg::PointCloud2::SharedPtr output_pointcloud_msg_ptr( new sensor_msgs::msg::PointCloud2);
     // pcl::toROSMsg(*colored_cloud, *output_pointcloud_msg_ptr); 
@@ -194,6 +197,63 @@ private:
     
     RCLCPP_INFO(this->get_logger(), "Publishing pointcloud");
     publisher_->publish(*output_pointcloud_msg_ptr);
+  }
+
+
+  void filterPolygon(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr &in_cloud, pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr out_cloud, const object_info &object)
+  {
+        pcl::PointCloud<pcl::PointXYZRGB> filtered_cloud;
+        pcl::CropHull<pcl::PointXYZRGB> crop_hull_filter;
+        crop_hull_filter.setInputCloud(in_cloud);
+        
+        // float trans_x = object.kinematics.pose_with_covariance.pose.position.x;
+        // float trans_y = object.kinematics.pose_with_covariance.pose.position.y;
+        // float trans_z = object.kinematics.pose_with_covariance.pose.position.z;
+
+        float trans_x = object.position.x;
+        float trans_y = object.position.y;
+        float trans_z = object.position.z;
+        Eigen::Vector3f translation (trans_x, trans_y, trans_z);
+
+        float rot_x = object.orientation.x;
+        float rot_y = object.orientation.y;
+        float rot_z = object.orientation.z;
+        Eigen::Quaternionf rotation(rot_x, rot_y, rot_z, 1.0);
+
+        // create filtering pointcloud from object polygon
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr hull_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+        for (size_t i = 0; i < object.shape.footprint.points.size(); ++i) 
+        {
+          pcl::PointXYZRGB point;
+          point.x = object.shape.footprint.points.at(i).x;
+          point.y = object.shape.footprint.points.at(i).y;
+          point.z = - object.shape.dimensions.z / 2.0;
+          hull_cloud->push_back(point);  
+          point.x = object.shape.footprint.points.at(i).x;
+          point.y = object.shape.footprint.points.at(i).y;
+          point.z = object.shape.dimensions.z / 2.0;
+          hull_cloud->push_back(point);
+        }
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr trans_hull_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+        pcl::transformPointCloud(hull_cloud, trans_hull_cloud, translation, rotation);      
+        crop_hull_filter.setHullCloud(hull_cloud->makeShared());
+
+        crop_hull_filter.filter(filtered_cloud);
+
+        // Define a custom color for the box polygons
+        const uint8_t r = 30, g = 44, b = 255;
+
+        for (auto cloud_it = filtered_cloud.begin(); cloud_it != filtered_cloud.end(); ++cloud_it)
+        {
+          cloud_it->r = r;
+          cloud_it->g = g;
+          cloud_it->b = b;
+        }
+
+        *out_cloud += filtered_cloud;
   }
 
  virtual void objectsCallback(typename MsgT::ConstSharedPtr msg) = 0;
@@ -277,9 +337,9 @@ int main(int argc, char ** argv)
   printf("hello world detected_objects_pointcloud_publisher package\n");
 
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<PredictedObjectsPointcloudPublisher>());
+  // rclcpp::spin(std::make_shared<PredictedObjectsPointcloudPublisher>());
   // rclcpp::spin(std::make_shared<TrackedObjectsPointcloudPublisher>());
-  // rclcpp::spin(std::make_shared<DetectedObjectsPointcloudPublisher>());
+  rclcpp::spin(std::make_shared<DetectedObjectsPointcloudPublisher>());
   rclcpp::shutdown();
   return 0;
 }
