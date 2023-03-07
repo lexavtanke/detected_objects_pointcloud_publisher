@@ -21,6 +21,9 @@
 #include <pcl/conversions.h>
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/search/pcl_search.h>
 
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/crop_box.h>
@@ -41,6 +44,20 @@ struct object_info
   geometry_msgs::msg::Pose position; 
   std::vector<autoware_auto_perception_msgs::msg::ObjectClassification>  classification;
 };
+
+inline pcl::PointXYZRGB toPCL(const double x, const double y, const double z)
+{
+  pcl::PointXYZRGB pcl_point;
+  pcl_point.x = x;
+  pcl_point.y = y;
+  pcl_point.z = z;
+  return pcl_point;
+}
+
+inline pcl::PointXYZRGB toPCL(const geometry_msgs::msg::Point & point)
+{
+  return toPCL(point.x, point.y, point.z);
+}
 
 
 template <typename MsgT>
@@ -113,6 +130,23 @@ public:
     return true;
   }
 
+  std::optional<float> getMaxRadius(object_info & object)
+{
+  if (object.shape.type == Shape::BOUNDING_BOX || object.shape.type == Shape::CYLINDER) {
+    return std::hypot(object.shape.dimensions.x * 0.5f, object.shape.dimensions.y * 0.5f);
+  } else if (object.shape.type == Shape::POLYGON) {
+    float max_dist = 0.0;
+    for (const auto & point : object.shape.footprint.points) {
+      const float dist = std::hypot(point.x, point.y);
+      max_dist = max_dist < dist ? dist : max_dist;
+    }
+    return max_dist;
+  } else {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "unknown shape type");
+    return std::nullopt;
+  }
+}
+
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscription_;
   typename rclcpp::Subscription<MsgT>::SharedPtr percepted_objects_subscription_;
@@ -139,27 +173,6 @@ private:
     
     RCLCPP_INFO(this->get_logger(), "before translation max X is '%f' max Y is '%f'", maxPt.x, maxPt.y);
     RCLCPP_INFO(this->get_logger(), "before translation min X is '%f' min Y is '%f'", minPt.x, minPt.y);
-
-    // // do transform if needed
-    // sensor_msgs::msg::PointCloud2 transformed_pointcloud;
-    // if (objects_frame_id_ != "" && input_pointcloud_msg.header.frame_id != objects_frame_id_) 
-    // {
-    //   geometry_msgs::msg::TransformStamped transform;
-    //   transform = tf_buffer_.lookupTransform(
-    //   objects_frame_id_, input_pointcloud_msg.header.frame_id, tf2::TimePointZero, tf2::durationFromSec(0.5));
-
-    //   tf2::doTransform(input_pointcloud_msg, transformed_pointcloud, transform);
-    //   RCLCPP_INFO(this->get_logger(), "Transform done");
-    //   pcl::PointCloud<pcl::PointXYZ> transformed_measured_cloud;
-    //   pcl::fromROSMsg(transformed_pointcloud, transformed_measured_cloud);
-    //   pcl::getMinMax3D(transformed_measured_cloud, minPt, maxPt);
-    //   RCLCPP_INFO(this->get_logger(), "after translation max X is '%f' max Y is '%f'", maxPt.x, maxPt.y);
-    //   RCLCPP_INFO(this->get_logger(), "after translation min X is '%f' min Y is '%f'", minPt.x, minPt.y);
-      
-    // } else {
-    //   transformed_pointcloud = input_pointcloud_msg;
-    //   RCLCPP_INFO(this->get_logger(), "Pass without transform pc frame '%s' objects frame '%s'", input_pointcloud_msg.header.frame_id.c_str(), objects_frame_id_.c_str());
-    // }
     
     // convert to pcl pointcloud
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -173,69 +186,34 @@ private:
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr colored_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::copyPointCloud(*temp_cloud, *colored_cloud);
 
+    // Create Kd-tree to search neighbor pointcloud to reduce cost.
+    pcl::search::Search<pcl::PointXYZRGB>::Ptr kdtree =
+    pcl::make_shared<pcl::search::KdTree<pcl::PointXYZRGB>>(false);
+    kdtree->setInputCloud(colored_cloud);
+
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
       
     if (objs_buffer.size() > 0) {
       RCLCPP_INFO(this->get_logger(), "Filtering pointcloud");
       for (auto object : objs_buffer) {
         RCLCPP_INFO(this->get_logger(), "object");
-        filterPolygon(colored_cloud, out_cloud, object);
-        // if (object.shape.type == Shape::BOUNDING_BOX || object.shape.type == Shape::CYLINDER )
-        // {
-          
-          
-          // pcl::PointCloud<pcl::PointXYZRGB> filtered_cloud;
-          // pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter (true);
-          // cropBoxFilter.setInputCloud(colored_cloud);
-          
-          // // float trans_x = object.kinematics.pose_with_covariance.pose.position.x;
-          // // float trans_y = object.kinematics.pose_with_covariance.pose.position.y;
-          // // float trans_z = object.kinematics.pose_with_covariance.pose.position.z;
 
-          // float trans_x = object.position.position.x;
-          // float trans_y = object.position.position.y;
-          // float trans_z = object.position.position.z;
-          // Eigen::Vector3f translation (trans_x, trans_y, trans_z);
-          // cropBoxFilter.setTranslation(translation);
-
-          // float rot_x = object.position.orientation.x;
-          // float rot_y = object.position.orientation.y;
-          // float rot_z = object.position.orientation.z;
-          // Eigen::Vector3f rotation(rot_x, rot_y, rot_z);
-          // cropBoxFilter.setRotation(rotation);
-
-          // float max_x =   object.shape.dimensions.x / 2.0;
-          // float min_x = - object.shape.dimensions.x / 2.0;
-          // float max_y =   object.shape.dimensions.y / 2.0;
-          // float min_y = - object.shape.dimensions.y / 2.0;
-          // float max_z =   object.shape.dimensions.z / 2.0;
-          // float min_z = - object.shape.dimensions.z / 2.0; 
-
-          // Eigen::Vector4f min_pt (min_x, min_y, min_z, 0.0f);
-          // Eigen::Vector4f max_pt (max_x, max_y, max_z, 0.0f);
-          // cropBoxFilter.setMin(min_pt);
-          // cropBoxFilter.setMax(max_pt);
-          // cropBoxFilter.filter(filtered_cloud);
-
-          // // Define a custom color for the box polygons
-          // const uint8_t r = 30, g = 44, b = 255;
-
-          // for (auto cloud_it = filtered_cloud.begin(); cloud_it != filtered_cloud.end(); ++cloud_it)
-          // {
-          //   cloud_it->r = r;
-          //   cloud_it->g = g;
-          //   cloud_it->b = b;
-          // }
-
-          // *out_cloud += filtered_cloud;
-
-        // } else if (object.shape.type == Shape::POLYGON) 
-        // {
-          // filterPolygon(colored_cloud, out_cloud, object);
-        // }
-// 
-      }
-      
+        const auto search_radius = getMaxRadius(object);
+        // Search neighbor pointcloud to reduce cost.
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr neighbor_pointcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        std::vector<int> indices;
+        std::vector<float> distances;        
+        kdtree->radiusSearch(
+        toPCL(object.position.position), search_radius.value(), indices, distances);
+        for (const auto & index : indices) {
+          neighbor_pointcloud->push_back(colored_cloud->at(index));
+        }  
+        
+        filterPolygon(neighbor_pointcloud, out_cloud, object);
+      }     
+    } else {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5, "objects buffer is empty");
+      return;
     }
 
 
@@ -246,11 +224,6 @@ private:
 
     output_pointcloud_msg_ptr->header = input_pointcloud_msg.header;
     output_pointcloud_msg_ptr->header.frame_id = objects_frame_id_;
-
-    // TODO(lexavtanke) get pointcloud in frame base link and detected objects in frame map
-    // change pointcloud frame to map 
-    // update color of the points and remove all points outside deceted objects 
-
     
     RCLCPP_INFO(this->get_logger(), "Publishing pointcloud");
     publisher_->publish(*output_pointcloud_msg_ptr);
@@ -406,10 +379,10 @@ class PredictedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPub
   void objectsCallback(const autoware_auto_perception_msgs::msg::PredictedObjects::ConstSharedPtr input_objs_msg) override
   {
     RCLCPP_INFO(this->get_logger(), "New objects");
-    RCLCPP_INFO(this->get_logger(), "Befor transform objects frame is '%s'", input_objs_msg->header.frame_id.c_str());
-    RCLCPP_INFO(this->get_logger(), "First object X is '%f' Y is '%f'", 
-    input_objs_msg->objects.at(0).kinematics.initial_pose_with_covariance.pose.position.x,
-    input_objs_msg->objects.at(0).kinematics.initial_pose_with_covariance.pose.position.y);
+    // RCLCPP_INFO(this->get_logger(), "Befor transform objects frame is '%s'", input_objs_msg->header.frame_id.c_str());
+    // RCLCPP_INFO(this->get_logger(), "First object X is '%f' Y is '%f'", 
+    // input_objs_msg->objects.at(0).kinematics.initial_pose_with_covariance.pose.position.x,
+    // input_objs_msg->objects.at(0).kinematics.initial_pose_with_covariance.pose.position.y);
     // Transform to pointcloud frame
     autoware_auto_perception_msgs::msg::PredictedObjects transformed_objects;
     if (!transformObjects(
@@ -420,10 +393,10 @@ class PredictedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPub
       return;
     }
     RCLCPP_INFO(this->get_logger(), "Transform DONE");
-    RCLCPP_INFO(this->get_logger(), "After transform objects frame is '%s'", transformed_objects.header.frame_id.c_str());
-    RCLCPP_INFO(this->get_logger(), "First object X is '%f' Y is '%f'", 
-    transformed_objects.objects.at(0).kinematics.initial_pose_with_covariance.pose.position.x,
-    transformed_objects.objects.at(0).kinematics.initial_pose_with_covariance.pose.position.y);
+    // RCLCPP_INFO(this->get_logger(), "After transform objects frame is '%s'", transformed_objects.header.frame_id.c_str());
+    // RCLCPP_INFO(this->get_logger(), "First object X is '%f' Y is '%f'", 
+    // transformed_objects.objects.at(0).kinematics.initial_pose_with_covariance.pose.position.x,
+    // transformed_objects.objects.at(0).kinematics.initial_pose_with_covariance.pose.position.y);
 
     objects_frame_id_ = transformed_objects.header.frame_id;
     objs_buffer.clear();
