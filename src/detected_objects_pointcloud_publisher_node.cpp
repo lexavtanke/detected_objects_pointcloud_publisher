@@ -69,7 +69,7 @@ public:
     tf_listener_(tf_buffer_)
   {
 
-    publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output/pointcloud", 10);  
+    publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output/pointcloud", rclcpp::SensorDataQoS());  
     pointcloud_subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "input/pointcloud", 
       rclcpp::SensorDataQoS(), 
