@@ -4,7 +4,7 @@ project(detected_objects_pointcloud_publisher)
 
 find_package(autoware_cmake REQUIRED)
 find_package(autoware_auto_perception_msgs REQUIRED)
-find_package(PCL REQUIRED COMPONENTS common filters)
+find_package(PCL REQUIRED COMPONENTS common filters search)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(tf2 REQUIRED)
@@ -38,6 +38,9 @@ add_definitions(${PCL_DEFINITIONS})
 # )
 
 ament_auto_add_executable(detected_objects_pointcloud_pub src/detected_objects_pointcloud_publisher_node.cpp)
+ament_auto_add_executable(tracked_objects_pointcloud_pub src/tracked_objects_pointcloud_publisher_node.cpp)
+ament_auto_add_executable(predicted_objects_pointcloud_pub src/predicted_objects_pointcloud_publisher_node.cpp)
+# ament_auto_add_executable(base_detected_objects_pointcloud_pub include/detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher_node.hpp)
 
 target_link_libraries(detected_objects_pointcloud_pub
   Eigen3::Eigen

@@ -1,4 +1,5 @@
 <launch>
+  <arg name="exec_name" default="predicted_objects_pointcloud_pub"/>
   <arg name="input_pointcloud_topic" default="/perception/obstacle_segmentation/pointcloud"/>
   <!-- <arg name="input_pointcloud_topic" default="/sensing/lidar/concatenated/pointcloud"/> -->
   
@@ -9,18 +10,9 @@
   <!-- <arg name="input_objects_topic" default="/perception/object_recognition/tracking/objects"/> -->
   <arg name="output_pointcloud_topic" default="/detected_objs_pointcloud"/>
 
-  <node pkg="detected_objects_pointcloud_publisher" exec="detected_objects_pointcloud_pub" name="detected_objects_pointcloud_pub_node" output="screen">
+  <node pkg="detected_objects_pointcloud_publisher" exec="$(var exec_name)" name="$(var input_pointcloud_topic)_node" output="screen">
     <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
     <remap from="input/detected_objects" to="$(var input_objects_topic)"/>
     <remap from="output/pointcloud" to="$(var output_pointcloud_topic)"/>
-    <param name="max_x" value="1.0"/>
-    <param name="min_x" value="0.0"/>
-    <param name="max_y" value="1.0"/>
-    <param name="min_y" value="0.0"/>
-    <param name="max_z" value="1.0"/>
-    <param name="min_z" value="0.0"/>
-    <param name="trans_x" value="1.0"/>
-    <param name="trans_y" value="1.0"/>
-    <param name="trans_z" value="1.0"/>
   </node>
 </launch>
