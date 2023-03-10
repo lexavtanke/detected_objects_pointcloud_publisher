@@ -1,17 +1,17 @@
-
-
-#include "detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher_node.hpp"
-#include "detected_objects_pointcloud_publisher/percepted_objects_pointcloud_publisher.hpp"
-
+#include "detected_objects_pointcloud_publisher.hpp"
 #include <rclcpp/rclcpp.hpp>
+#include <autoware_auto_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_auto_perception_msgs/msg/detected_object.hpp>
 
-namespace detected_objects_pointcloud_publisher 
-{
-  void DetectedObjectsPointcloudPublisher::objectsCallback(const autoware_auto_perception_msgs::msg::DetectedObjects::ConstSharedPtr input_objs_msg)
+class DetectedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPublisher<autoware_auto_perception_msgs::msg::DetectedObjects> {
+
+  private:
+  void objectsCallback(const autoware_auto_perception_msgs::msg::DetectedObjects::ConstSharedPtr input_objs_msg) override
   {
+
     // Transform to pointcloud frame
     autoware_auto_perception_msgs::msg::DetectedObjects transformed_objects;
-    if (transformObjects(
+    if (!transformObjects(
           *input_objs_msg, pointcloud_frame_id_, tf_buffer_,
           transformed_objects)) {
       // objects_pub_->publish(*input_objects);
@@ -30,18 +30,18 @@ namespace detected_objects_pointcloud_publisher
     // RCLCPP_INFO(this->get_logger(), "Update objects buffer");
   }
 
+};
 
-  int main(int argc, char ** argv)
-  {
-    (void) argc;
-    (void) argv;
 
-    printf("detected_objects_pointcloud_publisher package\n");
+int main(int argc, char ** argv)
+{
+  (void) argc;
+  (void) argv;
 
-    rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<DetectedObjectsPointcloudPublisher>());
-    rclcpp::shutdown();
-    return 0;
-  }
+  printf("Detected_objects_pointcloud_publisher package\n");
 
-} // namespace detected_objects_pointcloud_publisher
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<DetectedObjectsPointcloudPublisher>());
+  rclcpp::shutdown();
+  return 0;
+}

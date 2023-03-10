@@ -44,23 +44,24 @@ tf2_sensor_msgs)
 #   EXECUTABLE detected_objects_pointcloud_pub
 # )
 
-ament_auto_add_executable(detected_objects_pointcloud_pub src/detected_objects_pointcloud_publisher_node.cpp)
-target_link_libraries(detected_objects_pointcloud_pub percepted_objects_pointcloud_publisher)
+# ament_auto_add_executable(detected_objects_pointcloud_pub src/detected_objects_node.cpp)
+# target_link_libraries(detected_objects_pointcloud_pub
+#   Eigen3::Eigen
+#   ${PCL_LIBRARIES}
+# )
 
-# ament_target_dependencies (detected_objects_pointcloud_pub percepted_objects_pointcloud_publisher rclcBpp)
-# ament_auto_add_executable(tracked_objects_pointcloud_pub src/tracked_objects_pointcloud_publisher_node.cpp)
-# ament_auto_add_executable(predicted_objects_pointcloud_pub src/predicted_objects_pointcloud_publisher_node.cpp)
-# ament_auto_add_executable(base_detected_objects_pointcloud_pub src/detected_objects_pointcloud_publisher.cpp)
+# ament_auto_add_executable(tracked_objects_pointcloud_pub src/tracked_objects_node.cpp)
+# target_link_libraries(tracked_objects_pointcloud_pub
+#   Eigen3::Eigen
+#   ${PCL_LIBRARIES}
+# )
 
-target_include_directories(detected_objects_pointcloud_pub
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-
-target_link_libraries(detected_objects_pointcloud_pub
+ament_auto_add_executable(predicted_objects_pointcloud_pub src/tracked_objects_node.cpp)
+target_link_libraries(predicted_objects_pointcloud_pub
   Eigen3::Eigen
   ${PCL_LIBRARIES}
 )
+
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
