@@ -10,15 +10,15 @@
     <remap from="output/pointcloud" to="$(var output_pointcloud_topic)"/>
   </node>
 
-  <!-- <node pkg="detected_objects_pointcloud_publisher" exec="detected_objects_pointcloud_pub" name="detected_objects_pointcloud_pub_node" output="screen">
+  <node pkg="detected_objects_pointcloud_publisher" exec="detected_objects_pointcloud_pub" name="detected_objects_pointcloud_pub_node" output="screen">
     <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
     <remap from="input/detected_objects" to="/perception/object_recognition/detection/objects"/>
     <remap from="output/pointcloud" to="/detected_objs_pointcloud/detected"/>
-  </node> -->
+  </node>
 
-  <!-- <node pkg="detected_objects_pointcloud_publisher" exec="tracked_objects_pointcloud_pub" name="tracked_objects_pointcloud_pub_node" output="screen">
+  <node pkg="detected_objects_pointcloud_publisher" exec="tracked_objects_pointcloud_pub" name="tracked_objects_pointcloud_pub_node" output="screen">
     <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
     <remap from="input/detected_objects" to="/perception/object_recognition/tracking/objects"/>
     <remap from="output/pointcloud" to="/detected_objs_pointcloud/tracked"/>
-  </node> -->
+  </node>
 </launch>
