@@ -11,6 +11,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(rclcpp REQUIRED)
 autoware_package()
 
 include_directories(
@@ -25,11 +26,17 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-# ament_auto_add_library(detected_objects_pointcloud_pub_node SHARED
-#   src/detected_objects_pointcloud_publisher_node.cpp
-#   # include/detected_objects_pointcloud_publisher/detected_objects_pointcloud_pub_node.hpp
-# )
+add_library(percepted_objects_pointcloud_publisher SHARED
+src/percepted_objects_pointcloud_publisher.cpp
+src/detected_objects_pointcloud_publisher_node.cpp)
+target_compile_definitions(percepted_objects_pointcloud_publisher
+  PRIVATE "MINIMAL_COMPOSITION_DLL")
 
+ament_target_dependencies(percepted_objects_pointcloud_publisher rclcpp sensor_msgs autoware_auto_perception_msgs
+tier4_autoware_utils
+pcl_conversions
+tf2_ros
+tf2_sensor_msgs)
 
 
 # rclcpp_components_register_node(detected_objects_pointcloud_pub_node
@@ -38,9 +45,17 @@ add_definitions(${PCL_DEFINITIONS})
 # )
 
 ament_auto_add_executable(detected_objects_pointcloud_pub src/detected_objects_pointcloud_publisher_node.cpp)
-ament_auto_add_executable(tracked_objects_pointcloud_pub src/tracked_objects_pointcloud_publisher_node.cpp)
-ament_auto_add_executable(predicted_objects_pointcloud_pub src/predicted_objects_pointcloud_publisher_node.cpp)
-# ament_auto_add_executable(base_detected_objects_pointcloud_pub include/detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher_node.hpp)
+target_link_libraries(detected_objects_pointcloud_pub percepted_objects_pointcloud_publisher)
+
+# ament_target_dependencies (detected_objects_pointcloud_pub percepted_objects_pointcloud_publisher rclcBpp)
+# ament_auto_add_executable(tracked_objects_pointcloud_pub src/tracked_objects_pointcloud_publisher_node.cpp)
+# ament_auto_add_executable(predicted_objects_pointcloud_pub src/predicted_objects_pointcloud_publisher_node.cpp)
+# ament_auto_add_executable(base_detected_objects_pointcloud_pub src/detected_objects_pointcloud_publisher.cpp)
+
+target_include_directories(detected_objects_pointcloud_pub
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 target_link_libraries(detected_objects_pointcloud_pub
   Eigen3::Eigen

@@ -1,6 +1,7 @@
 
 
 #include "detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher_node.hpp"
+#include "detected_objects_pointcloud_publisher/percepted_objects_pointcloud_publisher.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -8,10 +9,9 @@ namespace detected_objects_pointcloud_publisher
 {
   void DetectedObjectsPointcloudPublisher::objectsCallback(const autoware_auto_perception_msgs::msg::DetectedObjects::ConstSharedPtr input_objs_msg)
   {
-
     // Transform to pointcloud frame
     autoware_auto_perception_msgs::msg::DetectedObjects transformed_objects;
-    if (!transformObjects(
+    if (transformObjects(
           *input_objs_msg, pointcloud_frame_id_, tf_buffer_,
           transformed_objects)) {
       // objects_pub_->publish(*input_objects);

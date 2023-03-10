@@ -1,5 +1,5 @@
 #include <optional>
-#include "detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher.hpp"
+#include "detected_objects_pointcloud_publisher/percepted_objects_pointcloud_publisher.hpp"
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>

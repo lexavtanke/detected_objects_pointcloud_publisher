@@ -1,5 +1,5 @@
 
-#include "detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher.hpp"
+#include "detected_objects_pointcloud_publisher/percepted_objects_pointcloud_publisher.hpp"
 // #include <pcl/kdtree/kdtree.h>
 #include <rclcpp/rclcpp.hpp>
 
@@ -12,7 +12,7 @@ class TrackedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPubli
   {
     // Transform to pointcloud frame
     autoware_auto_perception_msgs::msg::TrackedObjects transformed_objects;
-    if (!PerceptedObjectsPointcloudPublisher::transformObjects(
+    if (!transformObjects(
           *input_objs_msg, pointcloud_frame_id_, tf_buffer_,
           transformed_objects)) {
       // objects_pub_->publish(*input_objects);

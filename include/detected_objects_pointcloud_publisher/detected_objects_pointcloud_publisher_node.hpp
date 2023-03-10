@@ -1,5 +1,5 @@
 
-#include "detected_objects_pointcloud_publisher/detected_objects_pointcloud_publisher.hpp"
+#include "detected_objects_pointcloud_publisher/percepted_objects_pointcloud_publisher.hpp"
 namespace detected_objects_pointcloud_publisher 
 {
     class DetectedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPublisher<autoware_auto_perception_msgs::msg::DetectedObjects> {

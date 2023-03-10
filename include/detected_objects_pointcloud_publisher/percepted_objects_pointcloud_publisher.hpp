@@ -1,3 +1,7 @@
+#ifndef DETECTED_OBJECTS_POINTCLOUD_PUBLISHER_HPP
+
+#define DETECTED_OBJECTS_POINTCLOUD_PUBLISHER_HPP
+
 #include <cstdio>
 #include <boost/optional.hpp>
 #include <boost/geometry.hpp>
@@ -101,3 +105,5 @@ namespace detected_objects_pointcloud_publisher
   };
 
 } // namespace detected_objects_pointcloud_publisher 
+
+#endif
