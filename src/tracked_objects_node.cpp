@@ -9,6 +9,8 @@ class TrackedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPubli
   private:
   void objectsCallback(const autoware_auto_perception_msgs::msg::TrackedObjects::ConstSharedPtr input_objs_msg) override
   {
+    RCLCPP_INFO(this->get_logger(), "New objects");
+    point_color_ ={5, 5, 255}; // blue color
     // Transform to pointcloud frame
     autoware_auto_perception_msgs::msg::TrackedObjects transformed_objects;
     if (!transformObjects(

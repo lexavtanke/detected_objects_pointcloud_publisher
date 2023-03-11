@@ -38,6 +38,7 @@ class PredictedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPub
   void objectsCallback(const autoware_auto_perception_msgs::msg::PredictedObjects::ConstSharedPtr input_objs_msg) override
   {
     RCLCPP_INFO(this->get_logger(), "New objects");
+    point_color_ ={5, 255, 5}; // green color
     // RCLCPP_INFO(this->get_logger(), "Befor transform objects frame is '%s'", input_objs_msg->header.frame_id.c_str());
     // RCLCPP_INFO(this->get_logger(), "First object X is '%f' Y is '%f'", 
     // input_objs_msg->objects.at(0).kinematics.initial_pose_with_covariance.pose.position.x,
@@ -51,7 +52,7 @@ class PredictedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPub
       RCLCPP_INFO(this->get_logger(), "Did NOT transform objects");
       return;
     }
-    RCLCPP_INFO(this->get_logger(), "Transform DONE");
+    // RCLCPP_INFO(this->get_logger(), "Transform DONE");
     // RCLCPP_INFO(this->get_logger(), "After transform objects frame is '%s'", transformed_objects.header.frame_id.c_str());
     // RCLCPP_INFO(this->get_logger(), "First object X is '%f' Y is '%f'", 
     // transformed_objects.objects.at(0).kinematics.initial_pose_with_covariance.pose.position.x,

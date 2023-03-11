@@ -8,7 +8,10 @@ class DetectedObjectsPointcloudPublisher : public PerceptedObjectsPointcloudPubl
   private:
   void objectsCallback(const autoware_auto_perception_msgs::msg::DetectedObjects::ConstSharedPtr input_objs_msg) override
   {
-
+    // receive_objects_time_ = rclcpp::Time->;
+    objects_timestamp_ = input_objs_msg->header.stamp;
+    point_color_ = {255, 5, 5}; // red color
+    RCLCPP_INFO(this->get_logger(), "New objects");
     // Transform to pointcloud frame
     autoware_auto_perception_msgs::msg::DetectedObjects transformed_objects;
     if (!transformObjects(

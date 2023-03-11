@@ -41,6 +41,13 @@ struct object_info
   std::vector<autoware_auto_perception_msgs::msg::ObjectClassification>  classification;
 };
 
+struct color
+{
+  uint8_t r; 
+  uint8_t g; 
+  uint8_t b;
+};
+
 inline pcl::PointXYZRGB toPCL(const double x, const double y, const double z)
 {
   pcl::PointXYZRGB pcl_point;
@@ -78,6 +85,7 @@ public:
       std::bind(&PerceptedObjectsPointcloudPublisher::objectsCallback, 
       this, 
       std::placeholders::_1));
+    point_color_ ={255, 255, 255}; // defaul white color 
 
     RCLCPP_INFO(this->get_logger(), "Hello from percepted_objects_pointcloud_publisher constructor\n");
   }
@@ -153,6 +161,9 @@ public:
   std::vector<object_info> objs_buffer;
   std::string objects_frame_id_;
   std::string pointcloud_frame_id_;
+  rclcpp::Time receive_objects_time_;
+  rclcpp::Time objects_timestamp_;
+  color point_color_;
 
 private:
 
@@ -167,8 +178,8 @@ private:
     pcl::fromROSMsg(input_pointcloud_msg, measured_cloud);
     pcl::getMinMax3D(measured_cloud, minPt, maxPt);
     
-    RCLCPP_INFO(this->get_logger(), "before translation max X is '%f' max Y is '%f'", maxPt.x, maxPt.y);
-    RCLCPP_INFO(this->get_logger(), "before translation min X is '%f' min Y is '%f'", minPt.x, minPt.y);
+    // RCLCPP_INFO(this->get_logger(), "before translation max X is '%f' max Y is '%f'", maxPt.x, maxPt.y);
+    // RCLCPP_INFO(this->get_logger(), "before translation min X is '%f' min Y is '%f'", minPt.x, minPt.y);
     
     // convert to pcl pointcloud
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -188,11 +199,12 @@ private:
     kdtree->setInputCloud(colored_cloud);
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-      
+
+    RCLCPP_INFO(this->get_logger(), "'%ld' objects in objs_buffer", objs_buffer.size());  
     if (objs_buffer.size() > 0) {
-      RCLCPP_INFO(this->get_logger(), "Filtering pointcloud");
+      // RCLCPP_INFO(this->get_logger(), "Filtering pointcloud");
       for (auto object : objs_buffer) {
-        RCLCPP_INFO(this->get_logger(), "object");
+        // RCLCPP_INFO(this->get_logger(), "object");
 
         const auto search_radius = getMaxRadius(object);
         // Search neighbor pointcloud to reduce cost.
@@ -221,7 +233,7 @@ private:
     output_pointcloud_msg_ptr->header = input_pointcloud_msg.header;
     output_pointcloud_msg_ptr->header.frame_id = objects_frame_id_;
     
-    RCLCPP_INFO(this->get_logger(), "Publishing pointcloud");
+    // RCLCPP_INFO(this->get_logger(), "Publishing pointcloud");
     publisher_->publish(*output_pointcloud_msg_ptr);
   }
 
@@ -255,7 +267,11 @@ private:
         crop_hull_filter.filter(filtered_cloud);
 
         // Define a custom color for the box polygons
-        const uint8_t r = 30, g = 44, b = 255;
+        
+        // const uint8_t r = 30, g = 44, b = 255;
+        const uint8_t r = point_color_.r;
+        const uint8_t g = point_color_.g;
+        const uint8_t b = point_color_.b;
 
         for (auto cloud_it = filtered_cloud.begin(); cloud_it != filtered_cloud.end(); ++cloud_it)
         {

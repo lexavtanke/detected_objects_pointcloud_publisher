@@ -21,4 +21,4 @@
     <remap from="input/detected_objects" to="/perception/object_recognition/tracking/objects"/>
     <remap from="output/pointcloud" to="/detected_objs_pointcloud/tracked"/>
   </node>
-</launch>
+</launch> 
