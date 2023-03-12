@@ -151,6 +151,51 @@ public:
   }
 }
 
+  void filterPolygon(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr &in_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud, const object_info &object)
+  {        
+        pcl::PointCloud<pcl::PointXYZRGB> filtered_cloud;
+        std::vector<pcl::Vertices> vertices_array;
+        pcl::Vertices vertices;
+
+        Polygon2d poly2d =
+        tier4_autoware_utils::toPolygon2d(object.position, object.shape);
+        if (boost::geometry::is_empty(poly2d)) return;
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr hull_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        for (size_t i = 0; i < poly2d.outer().size(); ++i) {
+          vertices.vertices.emplace_back(i);
+          vertices_array.emplace_back(vertices);
+          hull_cloud->emplace_back(static_cast<float>(poly2d.outer().at(i).x()), 
+          static_cast<float>(poly2d.outer().at(i).y()), 
+          static_cast<float>(0.0));
+        }
+
+        pcl::CropHull<pcl::PointXYZRGB> crop_hull_filter;
+        crop_hull_filter.setInputCloud(in_cloud);
+        crop_hull_filter.setDim(2);
+        crop_hull_filter.setHullIndices(vertices_array);
+        crop_hull_filter.setHullCloud(hull_cloud);
+        crop_hull_filter.setCropOutside(true);
+        
+        crop_hull_filter.filter(filtered_cloud);
+
+        // Define a custom color for the box polygons
+        
+        // const uint8_t r = 30, g = 44, b = 255;
+        const uint8_t r = point_color_.r;
+        const uint8_t g = point_color_.g;
+        const uint8_t b = point_color_.b;
+
+        for (auto cloud_it = filtered_cloud.begin(); cloud_it != filtered_cloud.end(); ++cloud_it)
+        {
+          cloud_it->r = r;
+          cloud_it->g = g;
+          cloud_it->b = b;
+        }
+
+        *out_cloud += filtered_cloud;
+  }
+
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscription_;
   typename rclcpp::Subscription<MsgT>::SharedPtr percepted_objects_subscription_;
@@ -238,50 +283,6 @@ private:
   }
 
 
-  void filterPolygon(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr &in_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud, const object_info &object)
-  {        
-        pcl::PointCloud<pcl::PointXYZRGB> filtered_cloud;
-        std::vector<pcl::Vertices> vertices_array;
-        pcl::Vertices vertices;
-
-        Polygon2d poly2d =
-        tier4_autoware_utils::toPolygon2d(object.position, object.shape);
-        if (boost::geometry::is_empty(poly2d)) return;
-
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr hull_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-        for (size_t i = 0; i < poly2d.outer().size(); ++i) {
-          vertices.vertices.emplace_back(i);
-          vertices_array.emplace_back(vertices);
-          hull_cloud->emplace_back(static_cast<float>(poly2d.outer().at(i).x()), 
-          static_cast<float>(poly2d.outer().at(i).y()), 
-          static_cast<float>(0.0));
-        }
-
-        pcl::CropHull<pcl::PointXYZRGB> crop_hull_filter;
-        crop_hull_filter.setInputCloud(in_cloud);
-        crop_hull_filter.setDim(2);
-        crop_hull_filter.setHullIndices(vertices_array);
-        crop_hull_filter.setHullCloud(hull_cloud);
-        crop_hull_filter.setCropOutside(true);
-        
-        crop_hull_filter.filter(filtered_cloud);
-
-        // Define a custom color for the box polygons
-        
-        // const uint8_t r = 30, g = 44, b = 255;
-        const uint8_t r = point_color_.r;
-        const uint8_t g = point_color_.g;
-        const uint8_t b = point_color_.b;
-
-        for (auto cloud_it = filtered_cloud.begin(); cloud_it != filtered_cloud.end(); ++cloud_it)
-        {
-          cloud_it->r = r;
-          cloud_it->g = g;
-          cloud_it->b = b;
-        }
-
-        *out_cloud += filtered_cloud;
-  }
 
  virtual void objectsCallback(typename MsgT::ConstSharedPtr msg) = 0;
 

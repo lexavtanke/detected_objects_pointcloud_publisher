@@ -1,24 +1,30 @@
 <launch>
-  <arg name="exec_name" default="predicted_objects_pointcloud_pub" description="select exec file for different detected objects. [detected_objects_pointcloud_pub, tracked_objects_pointcloud_pub, predicted_objects_pointcloud_pub]"/>
+  <arg name="exec_name" default="predicted_objects_pointcloud_pub" description="select exec file for different detected objects. [detected_objects_pointcloud_pub, tracked_objects_pointcloud_pub, predicted_objects_pointcloud_pub , sync_objects_pointcloud_pub]"/>
   <arg name="input_pointcloud_topic" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="input_objects_topic" default="/perception/object_recognition/objects"/>
   <arg name="output_pointcloud_topic" default="/detected_objs_pointcloud/predicted"/>
 
-  <node pkg="detected_objects_pointcloud_publisher" exec="$(var exec_name)" name="$(var exec_name)_node" output="screen">
+  <!-- <node pkg="detected_objects_pointcloud_publisher" exec="$(var exec_name)" name="$(var exec_name)_node" output="screen">
     <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
     <remap from="input/detected_objects" to="$(var input_objects_topic)"/>
     <remap from="output/pointcloud" to="$(var output_pointcloud_topic)"/>
-  </node>
+  </node> -->
 
-  <node pkg="detected_objects_pointcloud_publisher" exec="detected_objects_pointcloud_pub" name="detected_objects_pointcloud_pub_node" output="screen">
+  <!-- <node pkg="detected_objects_pointcloud_publisher" exec="detected_objects_pointcloud_pub" name="detected_objects_pointcloud_pub_node" output="screen">
     <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
     <remap from="input/detected_objects" to="/perception/object_recognition/detection/objects"/>
     <remap from="output/pointcloud" to="/detected_objs_pointcloud/detected"/>
-  </node>
+  </node> -->
 
-  <node pkg="detected_objects_pointcloud_publisher" exec="tracked_objects_pointcloud_pub" name="tracked_objects_pointcloud_pub_node" output="screen">
+  <!-- <node pkg="detected_objects_pointcloud_publisher" exec="tracked_objects_pointcloud_pub" name="tracked_objects_pointcloud_pub_node" output="screen">
     <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
     <remap from="input/detected_objects" to="/perception/object_recognition/tracking/objects"/>
     <remap from="output/pointcloud" to="/detected_objs_pointcloud/tracked"/>
+  </node> -->
+
+  <node pkg="detected_objects_pointcloud_publisher" exec="sync_objects_pointcloud_pub" name="sync_objects_pointcloud_pub_node" output="screen">
+    <remap from="input/pointcloud" to="$(var input_pointcloud_topic)"/>
+    <remap from="input/detected_objects" to="/perception/object_recognition/tracking/objects"/>
+    <remap from="output/pointcloud" to="/detected_objs_pointcloud/sync"/>
   </node>
 </launch> 

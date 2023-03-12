@@ -50,6 +50,12 @@ target_link_libraries(predicted_objects_pointcloud_pub
   ${PCL_LIBRARIES}
 )
 
+ament_auto_add_executable(sync_objects_pointcloud_pub src/sync_objects_node.cpp)
+target_link_libraries(sync_objects_pointcloud_pub
+  Eigen3::Eigen
+  ${PCL_LIBRARIES}
+)
+
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
