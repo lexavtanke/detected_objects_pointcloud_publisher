@@ -215,7 +215,9 @@ private:
 
   void pointCloudCallback(const sensor_msgs::msg::PointCloud2 input_pointcloud_msg) 
   {
-    RCLCPP_INFO(this->get_logger(), "Get new pointcloud");
+    rclcpp::Time pointcloud_timestamp = input_pointcloud_msg.header.stamp;
+    double dt = (pointcloud_timestamp.nanoseconds() - objects_timestamp_.nanoseconds()) / 1000000; // to milisec 
+    RCLCPP_INFO(this->get_logger(), "Get new pointcloud msg timestamp is '%d'.'%d' difference is '%f'", input_pointcloud_msg.header.stamp.sec, input_pointcloud_msg.header.stamp.nanosec, dt);
     pointcloud_frame_id_ = input_pointcloud_msg.header.frame_id;
 
     pcl::PointXYZ minPt, maxPt;
@@ -245,7 +247,7 @@ private:
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-    RCLCPP_INFO(this->get_logger(), "'%ld' objects in objs_buffer", objs_buffer.size());  
+    RCLCPP_INFO(this->get_logger(), "poincloudcallback'%ld' objects in objs_buffer", objs_buffer.size());  
     if (objs_buffer.size() > 0) {
       // RCLCPP_INFO(this->get_logger(), "Filtering pointcloud");
       for (auto object : objs_buffer) {

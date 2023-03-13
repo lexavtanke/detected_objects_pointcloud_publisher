@@ -2,6 +2,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <autoware_auto_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_auto_perception_msgs/msg/tracked_object.hpp>
+#include <std_msgs/msg/header.hpp>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -51,7 +52,8 @@ private:
     const TrackedObjects::ConstSharedPtr & input_objs_msg,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_pointcloud_msg)
     { 
-      RCLCPP_INFO(this->get_logger(), "New objects");
+      RCLCPP_INFO(this->get_logger(), "onObjectsAndObstaclePointCloud");
+      RCLCPP_INFO(this->get_logger(), " SYNC New objects msg timestamp is '%d'.'%d'", input_objs_msg->header.stamp.sec, input_objs_msg->header.stamp.nanosec);
       point_color_ ={5, 5, 255}; // blue color
       // Transform to pointcloud frame
       autoware_auto_perception_msgs::msg::TrackedObjects transformed_objects;
@@ -71,7 +73,12 @@ private:
       }
       objects_frame_id_ = transformed_objects.header.frame_id;
 
-          RCLCPP_INFO(this->get_logger(), "Get new pointcloud");
+      // std_msgs::msg::Header::stamp stamp_diff = input_pointcloud_msg->header.stamp - input_objs_msg->header.stamp;
+      rclcpp::Time objects_timestamp_ = input_objs_msg->header.stamp;
+      rclcpp::Time pointcloud_timestamp = input_pointcloud_msg->header.stamp;
+      double dt = (pointcloud_timestamp.nanoseconds() - objects_timestamp_.nanoseconds()) / 1000000; // to milisec 
+      // builtin_interfaces::msg::Time 
+      RCLCPP_INFO(this->get_logger(), " SYNC Get new pointcloud msg timestamp is '%d'.'%d' difference is '%f'", input_pointcloud_msg->header.stamp.sec, input_pointcloud_msg->header.stamp.nanosec, dt);
       pointcloud_frame_id_ = input_pointcloud_msg->header.frame_id;
 
       // pcl::PointXYZ minPt, maxPt;
@@ -101,7 +108,7 @@ private:
 
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-      RCLCPP_INFO(this->get_logger(), "'%ld' objects in objs_buffer", objs_buffer.size());  
+      // RCLCPP_INFO(this->get_logger(), "'%ld' objects in objs_buffer", objs_buffer.size());  
       if (objs_buffer.size() > 0) {
         // RCLCPP_INFO(this->get_logger(), "Filtering pointcloud");
         for (auto object : objs_buffer) {
@@ -134,7 +141,7 @@ private:
       output_pointcloud_msg_ptr->header = input_pointcloud_msg->header;
       output_pointcloud_msg_ptr->header.frame_id = objects_frame_id_;
       
-      // RCLCPP_INFO(this->get_logger(), "Publishing pointcloud");
+      RCLCPP_INFO(this->get_logger(), "end onObjectsAndObstaclePointCloud");
       publisher_->publish(*output_pointcloud_msg_ptr);
     }
 
@@ -142,6 +149,11 @@ private:
   { 
     autoware_auto_perception_msgs::msg::TrackedObjects output;
     output.header = input_objs_msg->header;}
+
+    void pointCloudCallback(const sensor_msgs::msg::PointCloud2 input_pointcloud_msg) 
+  {
+    rclcpp::Time pointcloud_timestamp = input_pointcloud_msg.header.stamp;
+  }
 };
 
 int main(int argc, char ** argv)
