@@ -29,6 +29,8 @@ public:
       rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
     sync_.registerCallback(
       std::bind(&SyncObjectsPointcloudPublisher::onObjectsAndObstaclePointCloud, this, _1, _2));
+
+
     publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output/pointcloud", rclcpp::SensorDataQoS()); 
   } 
 
